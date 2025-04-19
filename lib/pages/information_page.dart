@@ -106,7 +106,7 @@ class InformationPage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            const Text('1.0.0'),
+            const Text('1.0.1'),
           ],
         ),
       ),
