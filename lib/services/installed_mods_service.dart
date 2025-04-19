@@ -1,15 +1,27 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:path/path.dart' as path;
 import '../models/installed_mod.dart';
 import 'file_path_service.dart';
+import 'prerequisite_checker.dart';
 
 class InstalledModsService {
   static List<InstalledMod> _installedMods = [];
 
+  static String get _modsFilePath {
+    final gameFolder = PrerequisiteChecker.gameFolderPath;
+    if (gameFolder == null) {
+      throw Exception('Game folder not set');
+    }
+    // Create a unique identifier for the game folder
+    final folderHash = gameFolder.hashCode.toRadixString(16);
+    return path.join(FilePathService.modArchivesDirPath, 'mods_$folderHash.json');
+  }
+
   static Future<void> _loadInstalledMods() async {
     await FilePathService.ensureConfigDirExists();
 
-    final file = File(FilePathService.installedModsFilePath);
+    final file = File(_modsFilePath);
     if (!await file.exists()) {
       _installedMods = [];
       return;
@@ -27,7 +39,7 @@ class InstalledModsService {
   static Future<void> _saveInstalledMods() async {
     await FilePathService.ensureConfigDirExists();
 
-    final file = File(FilePathService.installedModsFilePath);
+    final file = File(_modsFilePath);
     final json = jsonEncode(_installedMods.map((e) => e.toJson()).toList());
     await file.writeAsString(json);
   }

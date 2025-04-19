@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:path/path.dart' as path;
-import 'package:archive/archive.dart';
 import '../services/prerequisite_checker.dart';
 import '../widgets/game_folder_dialog.dart';
-import '../services/installed_mods_service.dart';
+import '../widgets/prerequisite_checker_screen.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -15,49 +13,6 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  bool _isExtracting = false;
-
-  Future<void> _reExtractMods(String newPath) async {
-    setState(() {
-      _isExtracting = true;
-    });
-
-    try {
-      final installedMods = await InstalledModsService.getInstalledMods();
-      
-      for (final mod in installedMods) {
-        final archiveFile = File(mod.archivePath);
-        if (!await archiveFile.exists()) {
-          throw Exception('Mod archive not found: ${mod.modName}');
-        }
-
-        final bytes = await archiveFile.readAsBytes();
-        final archive = ZipDecoder().decodeBytes(bytes);
-        
-        // Extract all files to the game folder
-        for (final file in archive.files) {
-          if (file.isFile) {
-            final filePath = path.join(newPath, file.name);
-            final outputFile = File(filePath);
-            await outputFile.parent.create(recursive: true);
-            await outputFile.writeAsBytes(file.content);
-          }
-        }
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error re-extracting mods: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      setState(() {
-        _isExtracting = false;
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -114,23 +69,35 @@ class _SettingsPageState extends State<SettingsPage> {
                     const SizedBox(height: 16),
                     ElevatedButton.icon(
                       onPressed: () async {
-                        final oldPath = PrerequisiteChecker.gameFolderPath;
-                        final newPath = await GameFolderDialog.show(context);
-                        if (newPath != null && mounted && oldPath != null && oldPath != newPath) {
-                          await _reExtractMods(newPath);
+                        await GameFolderDialog.show(context);
+                        if (mounted) {
+                          setState(() {});
+                          // Rerun prerequisite checks
+                          final results = await PrerequisiteChecker.runChecks();
+                          final hasFailures = results.any((result) => !result.$2);
+                          if (hasFailures && mounted) {
+                            // Pop back to root and show prerequisite screen
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => PrerequisiteCheckerScreen(
+                                  onComplete: (context) {
+                                    Navigator.pushReplacement(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => const SettingsPage(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              (route) => false,
+                            );
+                          }
                         }
-                        setState(() {});
                       },
-                      icon: _isExtracting 
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Icon(Icons.folder),
-                      label: Text(_isExtracting ? 'Extracting mods...' : 'Change Game Folder'),
+                      icon: const Icon(Icons.folder),
+                      label: const Text('Change Game Folder'),
                     ),
                   ],
                 ),
