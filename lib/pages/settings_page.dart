@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../services/prerequisite_checker.dart';
 import '../widgets/game_folder_dialog.dart';
 import '../widgets/prerequisite_checker_screen.dart';
+import '../widgets/main_layout.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -82,10 +83,11 @@ class _SettingsPageState extends State<SettingsPage> {
                               MaterialPageRoute(
                                 builder: (context) => PrerequisiteCheckerScreen(
                                   onComplete: (context) {
+                                    // Return to the main layout
                                     Navigator.pushReplacement(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => const SettingsPage(),
+                                        builder: (context) => const MainLayout(),
                                       ),
                                     );
                                   },
