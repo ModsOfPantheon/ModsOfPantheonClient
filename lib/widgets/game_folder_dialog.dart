@@ -21,7 +21,7 @@ class GameFolderDialog extends StatelessWidget {
         style: TextStyle(color: Colors.white),
       ),
       content: const Text(
-        'Please select the folder containing the game executable. '
+        'Please select the folder where your game is installed. '
         'This should be the folder containing the Pantheon.exe file.',
         style: TextStyle(color: Colors.white),
       ),
