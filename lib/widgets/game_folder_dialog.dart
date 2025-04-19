@@ -21,8 +21,8 @@ class GameFolderDialog extends StatelessWidget {
         style: TextStyle(color: Colors.white),
       ),
       content: const Text(
-        'Please select the folder where the game is installed. '
-        'This should be the folder containing the game executable.',
+        'Please select the folder containing the game executable. '
+        'This should be the folder containing the Pantheon.exe file.',
         style: TextStyle(color: Colors.white),
       ),
       actions: [
@@ -37,17 +37,20 @@ class GameFolderDialog extends StatelessWidget {
           onPressed: () async {
             final result = await FilePicker.platform.getDirectoryPath();
             if (result != null) {
-              // Check if this looks like a valid game folder
-              final gameExe = File('$result/Pantheon.exe'); // Adjust this to match your game's executable name
+              final gameExe = File('$result/Pantheon.exe');
               if (await gameExe.exists()) {
                 await PrerequisiteChecker.setGameFolder(result);
-                Navigator.pop(context, result);
+                if (context.mounted) {
+                  Navigator.pop(context, result);
+                }
               } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Selected folder does not appear to contain the game executable'),
-                  ),
-                );
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Selected folder does not appear to contain Pantheon.exe'),
+                    ),
+                  );
+                }
               }
             }
           },

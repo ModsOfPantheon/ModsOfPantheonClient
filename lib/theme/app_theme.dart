@@ -6,7 +6,6 @@ class AppTheme {
       seedColor: const Color(0xFF1A237E),
       primary: const Color(0xFF1A237E),
       secondary: const Color(0xFFFFD700),
-      background: const Color(0xFF121212),
       surface: const Color(0xFF1E1E1E),
       onSurface: Colors.white,
       brightness: Brightness.dark,
@@ -18,7 +17,7 @@ class AppTheme {
       foregroundColor: Colors.white,
     ),
     navigationRailTheme: NavigationRailThemeData(
-      backgroundColor: const Color(0xFF1A237E).withOpacity(0.1),
+      backgroundColor: const Color(0xFF1A237E).withValues(alpha: 0.1),
       selectedIconTheme: const IconThemeData(color: Color(0xFFFFD700)),
       unselectedIconTheme: IconThemeData(color: Colors.grey[400]),
       selectedLabelTextStyle: const TextStyle(color: Color(0xFFFFD700)),

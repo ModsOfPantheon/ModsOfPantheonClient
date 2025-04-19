@@ -3,6 +3,7 @@ import '../pages/home_page.dart';
 import '../pages/mod_details_page.dart';
 import '../pages/installed_mods_page.dart';
 import '../pages/information_page.dart';
+import '../pages/settings_page.dart';
 import '../models/mod.dart';
 
 class MainLayout extends StatefulWidget {
@@ -85,7 +86,7 @@ class _MainLayoutState extends State<MainLayout> {
                 InstalledModsPage(
                   isSelected: _selectedIndex == 1,
                 ),
-                const Center(child: Text('Settings')),
+                const SettingsPage(),
                 const InformationPage(),
               ],
             ),

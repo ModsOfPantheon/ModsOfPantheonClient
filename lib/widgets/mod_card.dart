@@ -55,8 +55,8 @@ class _ModCardState extends State<ModCard> {
         child: Card(
           elevation: isPressed ? 0 : (isHovered ? 8 : 2),
           color: isPressed 
-              ? theme.colorScheme.surface.withOpacity(0.7)
-              : (isHovered ? theme.colorScheme.surface.withOpacity(0.9) : theme.colorScheme.surface),
+              ? theme.colorScheme.surface.withValues(alpha: 0.7)
+              : (isHovered ? theme.colorScheme.surface.withValues(alpha: 0.9) : theme.colorScheme.surface),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
