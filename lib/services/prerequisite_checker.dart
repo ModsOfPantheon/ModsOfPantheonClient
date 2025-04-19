@@ -30,11 +30,16 @@ class PrerequisiteCheck {
 class PrerequisiteChecker {
   static final List<PrerequisiteCheck> _checks = [];
   static String? gameFolderPath;
+  static List<String> gameFolderPaths = [];
 
   static Future<void> initialize() async {
     await FilePathService.ensureConfigDirExists();
     final config = await _loadConfig();
     gameFolderPath = config['game_folder_path'] as String?;
+    gameFolderPaths = List<String>.from(config['game_folder_paths'] ?? []);
+    if (gameFolderPath != null && !gameFolderPaths.contains(gameFolderPath)) {
+      gameFolderPaths.add(gameFolderPath!);
+    }
   }
 
   static Future<Map<String, dynamic>> _loadConfig() async {
@@ -54,8 +59,23 @@ class PrerequisiteChecker {
 
   static Future<void> setGameFolder(String path) async {
     gameFolderPath = path;
+    if (!gameFolderPaths.contains(path)) {
+      gameFolderPaths.add(path);
+    }
     final config = await _loadConfig();
     config['game_folder_path'] = path;
+    config['game_folder_paths'] = gameFolderPaths;
+    await _saveConfig(config);
+  }
+
+  static Future<void> removeGameFolder(String path) async {
+    gameFolderPaths.remove(path);
+    if (gameFolderPath == path) {
+      gameFolderPath = gameFolderPaths.isNotEmpty ? gameFolderPaths.first : null;
+    }
+    final config = await _loadConfig();
+    config['game_folder_path'] = gameFolderPath;
+    config['game_folder_paths'] = gameFolderPaths;
     await _saveConfig(config);
   }
 

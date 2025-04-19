@@ -9,20 +9,20 @@ class FilePathService {
 
   static String? _appDataPath;
 
-  static String get _configDirPath {
+  static String get configDirPath {
     final appData = _appDataPath ?? Platform.environment['APPDATA'];
     if (appData == null) throw Exception('APPDATA environment variable not found');
     return path.join(appData, _configDirName);
   }
 
-  static String get configFilePath => path.join(_configDirPath, _configFileName);
-  static String get installedModsFilePath => path.join(_configDirPath, _installedModsFileName);
-  static String get modArchivesDirPath => path.join(_configDirPath, _modArchivesDirName);
+  static String get configFilePath => path.join(configDirPath, _configFileName);
+  static String get installedModsFilePath => path.join(configDirPath, _installedModsFileName);
+  static String get modArchivesDirPath => path.join(configDirPath, _modArchivesDirName);
 
-  static String get tempDirPath => path.join(_configDirPath, 'temp');
+  static String get tempDirPath => path.join(configDirPath, 'temp');
 
   static Future<void> ensureConfigDirExists() async {
-    final configDir = Directory(_configDirPath);
+    final configDir = Directory(configDirPath);
     if (!await configDir.exists()) {
       await configDir.create(recursive: true);
     }
