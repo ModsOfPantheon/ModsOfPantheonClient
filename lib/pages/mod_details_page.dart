@@ -53,8 +53,6 @@ class _ModDetailsPageState extends State<ModDetailsPage> {
         _error = null;
       });
       final versions = await ApiService.getModVersions(widget.mod.id);
-      // Sort versions by creation date, most recent first
-      versions.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       setState(() {
         _versions = versions;
       });

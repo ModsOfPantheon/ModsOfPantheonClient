@@ -59,7 +59,10 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body);
-      return data.map((version) => ModVersion.fromJson(version)).toList();
+      final versions = data.map((version) => ModVersion.fromJson(version)).toList();
+      // Sort versions by creation date, most recent first
+      versions.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return versions;
     } else {
       throw Exception('Failed to load mod versions: ${response.statusCode}');
     }
