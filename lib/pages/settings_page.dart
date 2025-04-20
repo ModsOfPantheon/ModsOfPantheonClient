@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/prerequisite_checker.dart';
 import '../widgets/game_folder_dialog.dart';
 import '../widgets/prerequisite_checker_screen.dart';
 import '../widgets/main_layout.dart';
 import '../services/file_path_service.dart';
+import '../services/installed_mods_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -15,6 +15,59 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  bool _isRestoring = false;
+
+  Future<void> _restoreAllMods() async {
+    try {
+      setState(() {
+        _isRestoring = true;
+      });
+
+      await InstalledModsService.restoreAllMods();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Successfully restored all mods',
+              style: TextStyle(color: Colors.white),
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      String errorMessage;
+      if (e.toString().contains('Game folder not set')) {
+        errorMessage = 'Please set your game folder in the settings before restoring mods.';
+      } else if (e.toString().contains('game appears to be running')) {
+        errorMessage = e.toString();
+      } else if (e.toString().contains('Mod archive not found')) {
+        errorMessage = e.toString();
+      } else {
+        errorMessage = 'Failed to restore mods. Please try again later.';
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              errorMessage,
+              style: const TextStyle(color: Colors.white),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRestoring = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -236,6 +289,69 @@ class _SettingsPageState extends State<SettingsPage> {
                                 }
                               }
                             },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Mod Management',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Restore all mods:',
+                              style: TextStyle(
+                                color: Colors.grey[400],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Re-extract all installed mods to the game folder. Use this after game updates if you are running the standalone launcher.',
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: _isRestoring ? null : _restoreAllMods,
+                            icon: _isRestoring
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.restore),
+                            label: const Text('Restore All Mods'),
+                            style: ElevatedButton.styleFrom(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                            ),
                           ),
                         ],
                       ),

@@ -1,7 +1,16 @@
 import 'package:flutter/material.dart';
 import '../models/mod.dart';
 import '../models/installed_mod.dart';
+import '../models/mod_version.dart';
+import '../models/mod_file.dart';
 import '../services/installed_mods_service.dart';
+import '../services/api_service.dart';
+import '../services/prerequisite_checker.dart';
+import '../services/file_path_service.dart';
+import 'dart:io';
+import 'package:path/path.dart' as path;
+import 'package:archive/archive.dart';
+import 'dart:convert';
 
 class ModCard extends StatefulWidget {
   final Mod mod;
@@ -21,6 +30,8 @@ class _ModCardState extends State<ModCard> {
   bool isHovered = false;
   bool isPressed = false;
   InstalledMod? _installedVersion;
+  bool _isUninstalling = false;
+  bool _isInstalling = false;
 
   @override
   void initState() {
@@ -34,6 +45,123 @@ class _ModCardState extends State<ModCard> {
       setState(() {
         _installedVersion = installed;
       });
+    }
+  }
+
+  Future<void> _installLatestVersion() async {
+    try {
+      setState(() {
+        _isInstalling = true;
+      });
+
+      await InstalledModsService.installLatestVersion(widget.mod);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Successfully installed mod',
+              style: TextStyle(color: Colors.white),
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+
+      final installed = await InstalledModsService.getInstalledVersion(widget.mod.id);
+      if (mounted) {
+        setState(() {
+          _installedVersion = installed;
+        });
+      }
+    } catch (e) {
+      String errorMessage;
+      if (e.toString().contains('Game folder not set')) {
+        errorMessage = 'Please set your game folder in the settings before installing mods.';
+      } else if (e.toString().contains('game appears to be running')) {
+        errorMessage = e.toString();
+      } else if (e.toString().contains('No versions available')) {
+        errorMessage = e.toString();
+      } else if (e.toString().contains('Failed to download')) {
+        errorMessage = e.toString();
+      } else {
+        errorMessage = 'Failed to install mod. Please try again later.';
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              errorMessage,
+              style: const TextStyle(color: Colors.white),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isInstalling = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _uninstallMod() async {
+    try {
+      setState(() {
+        _isUninstalling = true;
+      });
+
+      await InstalledModsService.uninstallMod(widget.mod.id);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Successfully uninstalled mod',
+              style: TextStyle(color: Colors.white),
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+
+      setState(() {
+        _installedVersion = null;
+      });
+    } catch (e) {
+      String errorMessage;
+      if (e.toString().contains('Game folder not set')) {
+        errorMessage = 'Please set your game folder in the settings before uninstalling mods.';
+      } else if (e.toString().contains('game appears to be running')) {
+        errorMessage = e.toString();
+      } else if (e.toString().contains('Mod archive not found')) {
+        errorMessage = e.toString();
+      } else if (e.toString().contains('Mod not found in installed mods list')) {
+        errorMessage = e.toString();
+      } else {
+        errorMessage = 'Failed to uninstall mod. Please try again later.';
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              errorMessage,
+              style: const TextStyle(color: Colors.white),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUninstalling = false;
+        });
+      }
     }
   }
 
@@ -52,6 +180,64 @@ class _ModCardState extends State<ModCard> {
         onTapUp: (_) => setState(() => isPressed = false),
         onTapCancel: () => setState(() => isPressed = false),
         onTap: widget.onTap,
+        onSecondaryTapDown: (details) {
+          showMenu(
+            context: context,
+            position: RelativeRect.fromLTRB(
+              details.globalPosition.dx,
+              details.globalPosition.dy,
+              details.globalPosition.dx,
+              details.globalPosition.dy,
+            ),
+            items: [
+              PopupMenuItem(
+                onTap: _installedVersion == null 
+                    ? () {
+                        Future.microtask(() async {
+                          await _installLatestVersion();
+                        });
+                        return null;
+                      }
+                    : null,
+                enabled: _installedVersion == null,
+                child: Row(
+                  children: [
+                    _isInstalling
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Icon(Icons.download),
+                    const SizedBox(width: 8),
+                    const Text('Install Latest'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                onTap: _installedVersion != null ? _uninstallMod : null,
+                enabled: _installedVersion != null,
+                child: Row(
+                  children: [
+                    _isUninstalling
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Icon(Icons.delete),
+                    const SizedBox(width: 8),
+                    const Text('Uninstall'),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
         child: Card(
           elevation: isPressed ? 0 : (isHovered ? 8 : 2),
           color: isPressed 
