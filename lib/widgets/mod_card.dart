@@ -1,16 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/mod.dart';
 import '../models/installed_mod.dart';
-import '../models/mod_version.dart';
-import '../models/mod_file.dart';
 import '../services/installed_mods_service.dart';
-import '../services/api_service.dart';
-import '../services/prerequisite_checker.dart';
-import '../services/file_path_service.dart';
-import 'dart:io';
-import 'package:path/path.dart' as path;
-import 'package:archive/archive.dart';
-import 'dart:convert';
 
 class ModCard extends StatefulWidget {
   final Mod mod;
