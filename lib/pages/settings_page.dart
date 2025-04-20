@@ -207,7 +207,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               icon: const Icon(Icons.arrow_drop_down),
                               underline: Container(
                                 height: 1,
-                                color: Colors.white.withOpacity(0.5),
+                                color: Colors.white.withValues(alpha: 0.5),
                               ),
                               isExpanded: true,
                               focusColor: const Color(0xFF1E1E1E),
