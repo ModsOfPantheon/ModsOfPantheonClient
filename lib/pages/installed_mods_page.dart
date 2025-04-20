@@ -124,8 +124,6 @@ class _InstalledModsPageState extends State<InstalledModsPage> {
 
         // Only remove from installed mods list after successful file deletion
         await InstalledModsService.removeInstalledMod(mod.modId);
-        // Delete the archive file
-        await archiveFile.delete();
         _showSuccess('Successfully uninstalled ${mod.modName}');
         _loadInstalledMods();
       } catch (e) {
