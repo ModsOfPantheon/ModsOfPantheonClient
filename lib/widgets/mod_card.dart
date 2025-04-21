@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/mod.dart';
 import '../models/installed_mod.dart';
 import '../services/installed_mods_service.dart';
+import '../services/api_service.dart';
 
 class ModCard extends StatefulWidget {
   final Mod mod;
@@ -45,22 +46,27 @@ class _ModCardState extends State<ModCard> {
         _isInstalling = true;
       });
 
-      await InstalledModsService.installLatestVersion(widget.mod);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Successfully installed mod',
-              style: TextStyle(color: Colors.white),
-            ),
-            backgroundColor: Colors.green,
-          ),
-        );
+      // Get the latest version first
+      final versions = await ApiService.getModVersions(widget.mod.id);
+      if (versions.isEmpty) {
+        throw Exception('No versions available for this mod');
       }
+
+      await InstalledModsService.installLatestVersion(widget.mod);
 
       final installed = await InstalledModsService.getInstalledVersion(widget.mod.id);
       if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Successfully installed ${widget.mod.name} ${installed?.version ?? "latest version"}',
+              style: const TextStyle(color: Colors.white),
+            ),
+            backgroundColor: const Color(0xFF2E7D32),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+          ),
+        );
         setState(() {
           _installedVersion = installed;
         });
@@ -86,7 +92,9 @@ class _ModCardState extends State<ModCard> {
               errorMessage,
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: Colors.red,
+            backgroundColor: const Color(0xFFB71C1C),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -109,12 +117,14 @@ class _ModCardState extends State<ModCard> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-              'Successfully uninstalled mod',
-              style: TextStyle(color: Colors.white),
+              'Successfully uninstalled ${widget.mod.name}',
+              style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: Colors.green,
+            backgroundColor: const Color(0xFF2E7D32),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -143,7 +153,9 @@ class _ModCardState extends State<ModCard> {
               errorMessage,
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: Colors.red,
+            backgroundColor: const Color(0xFFB71C1C),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -159,6 +171,9 @@ class _ModCardState extends State<ModCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final hasUpdate = _installedVersion != null && 
+                      _installedVersion!.version != widget.mod.latestVersion;
+
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => isHovered = true),
@@ -182,7 +197,7 @@ class _ModCardState extends State<ModCard> {
             ),
             items: [
               PopupMenuItem(
-                onTap: _installedVersion == null 
+                onTap: _installedVersion == null || hasUpdate
                     ? () {
                         Future.microtask(() async {
                           await _installLatestVersion();
@@ -190,7 +205,7 @@ class _ModCardState extends State<ModCard> {
                         return null;
                       }
                     : null,
-                enabled: _installedVersion == null,
+                enabled: _installedVersion == null || hasUpdate,
                 child: Row(
                   children: [
                     _isInstalling
@@ -203,7 +218,7 @@ class _ModCardState extends State<ModCard> {
                           )
                         : const Icon(Icons.download),
                     const SizedBox(width: 8),
-                    const Text('Install Latest'),
+                    Text(_installedVersion == null ? 'Install Latest' : 'Update'),
                   ],
                 ),
               ),
@@ -258,11 +273,32 @@ class _ModCardState extends State<ModCard> {
                 ),
                 if (_installedVersion != null) ...[
                   const SizedBox(height: 4),
-                  Text(
-                    'Installed: ${_installedVersion!.version}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.secondary,
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        'Installed: ${_installedVersion!.version}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.secondary,
+                        ),
+                      ),
+                      if (hasUpdate) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF272F88),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'Update Available',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
                 const SizedBox(height: 8),

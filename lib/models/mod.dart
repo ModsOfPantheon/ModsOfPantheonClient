@@ -4,7 +4,7 @@ class Mod {
   final String shortDescription;
   final String author;
   final DateTime createdAt;
-  final int? latestVersionId;
+  final String latestVersion;
 
   Mod({
     required this.id,
@@ -12,7 +12,7 @@ class Mod {
     required this.shortDescription,
     required this.author,
     required this.createdAt,
-    this.latestVersionId,
+    required this.latestVersion,
   });
 
   factory Mod.fromJson(Map<String, dynamic> json) {
@@ -22,7 +22,7 @@ class Mod {
       shortDescription: json['ShortDescription'],
       author: json['Author'],
       createdAt: DateTime.parse(json['CreatedAt']),
-      latestVersionId: json['LatestVersionId'],
+      latestVersion: json['LatestVersion'],
     );
   }
 } 
