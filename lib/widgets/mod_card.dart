@@ -218,7 +218,7 @@ class _ModCardState extends State<ModCard> {
                           )
                         : const Icon(Icons.download),
                     const SizedBox(width: 8),
-                    Text(_installedVersion == null ? 'Install Latest' : 'Update'),
+                    Text(_installedVersion == null ? 'Install' : 'Update'),
                   ],
                 ),
               ),
