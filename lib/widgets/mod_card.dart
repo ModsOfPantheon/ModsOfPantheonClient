@@ -143,7 +143,7 @@ class _ModCardState extends State<ModCard> {
       } else if (e.toString().contains('Mod not found in installed mods list')) {
         errorMessage = e.toString();
       } else {
-        errorMessage = 'Failed to uninstall mod. Please try again later.';
+        errorMessage = 'Failed to uninstall ${widget.mod.name}. Please try again later.';
       }
 
       if (mounted) {
