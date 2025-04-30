@@ -12,7 +12,7 @@ class MelonLoaderPrerequisite extends PrerequisiteCheck {
       : super(
           name: 'MelonLoader',
           description: 'Required for running mods',
-          failureMessage: 'Game folder not set or MelonLoader is not installed',
+          failureMessage: 'MelonLoader is not installed',
           check: _checkMelonLoader,
           onFix: (context, prerequisite) => (prerequisite as MelonLoaderPrerequisite)._installMelonLoader(context),
           dependencies: ['Game Folder'],

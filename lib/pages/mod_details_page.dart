@@ -11,6 +11,7 @@ import '../services/installed_mods_service.dart';
 import '../widgets/error_display.dart';
 import '../services/file_path_service.dart';
 import 'dart:convert';
+import 'package:url_launcher/url_launcher.dart';
 
 class ModDetailsPage extends StatefulWidget {
   final Mod mod;
@@ -223,6 +224,21 @@ class _ModDetailsPageState extends State<ModDetailsPage> {
             ],
           ),
           actions: [
+            if (widget.mod.githubUrl != null)
+              IconButton(
+                icon: Image.asset(
+                  'assets/images/github_logo.png',
+                  width: 24,
+                  height: 24,
+                ),
+                tooltip: 'View on GitHub',
+                onPressed: () async {
+                  final url = Uri.parse(widget.mod.githubUrl!);
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url);
+                  }
+                },
+              ),
             IconButton(
               icon: const Icon(Icons.refresh),
               onPressed: _loadModVersions,

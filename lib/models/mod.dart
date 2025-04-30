@@ -5,6 +5,7 @@ class Mod {
   final String author;
   final DateTime createdAt;
   final String latestVersion;
+  final String? githubUrl;
 
   Mod({
     required this.id,
@@ -13,6 +14,7 @@ class Mod {
     required this.author,
     required this.createdAt,
     required this.latestVersion,
+    this.githubUrl,
   });
 
   factory Mod.fromJson(Map<String, dynamic> json) {
@@ -23,6 +25,7 @@ class Mod {
       author: json['Author'],
       createdAt: DateTime.parse(json['CreatedAt']),
       latestVersion: json['LatestVersion'],
+      githubUrl: json['GithubUrl'],
     );
   }
 } 
