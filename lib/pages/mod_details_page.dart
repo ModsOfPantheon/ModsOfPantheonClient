@@ -68,9 +68,7 @@ class _ModDetailsPageState extends State<ModDetailsPage> {
             message,
             style: const TextStyle(color: Colors.white),
           ),
-          backgroundColor: const Color(0xFFB71C1C),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 3),
+          backgroundColor: Colors.red,
         ),
       );
     }
@@ -84,9 +82,7 @@ class _ModDetailsPageState extends State<ModDetailsPage> {
             message,
             style: const TextStyle(color: Colors.white),
           ),
-          backgroundColor: const Color(0xFF2E7D32),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 3),
+          backgroundColor: Colors.green,
         ),
       );
     }

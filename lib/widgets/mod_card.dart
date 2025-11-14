@@ -62,9 +62,7 @@ class _ModCardState extends State<ModCard> {
               'Successfully installed ${widget.mod.name} ${installed?.version ?? "latest version"}',
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: const Color(0xFF2E7D32),
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 3),
+            backgroundColor: Colors.green,
           ),
         );
         setState(() {
@@ -92,9 +90,7 @@ class _ModCardState extends State<ModCard> {
               errorMessage,
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: const Color(0xFFB71C1C),
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 3),
+            backgroundColor: Colors.red,
           ),
         );
       }
@@ -122,9 +118,7 @@ class _ModCardState extends State<ModCard> {
               'Successfully uninstalled ${widget.mod.name}',
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: const Color(0xFF2E7D32),
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 3),
+            backgroundColor: Colors.green,
           ),
         );
       }
@@ -153,9 +147,7 @@ class _ModCardState extends State<ModCard> {
               errorMessage,
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: const Color(0xFFB71C1C),
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 3),
+            backgroundColor: Colors.red,
           ),
         );
       }

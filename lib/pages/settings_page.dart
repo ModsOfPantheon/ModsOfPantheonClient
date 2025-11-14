@@ -32,9 +32,7 @@ class _SettingsPageState extends State<SettingsPage> {
               'Successfully restored all mods',
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: const Color(0xFF2E7D32),
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 3),
+            backgroundColor: Colors.green,
           ),
         );
       }
@@ -57,9 +55,7 @@ class _SettingsPageState extends State<SettingsPage> {
               errorMessage,
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: const Color(0xFFB71C1C),
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 3),
+            backgroundColor: Colors.red,
           ),
         );
       }
