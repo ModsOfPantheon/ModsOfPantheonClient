@@ -4,6 +4,7 @@ import 'package:path/path.dart' as path;
 import 'package:archive/archive.dart';
 import '../models/installed_mod.dart';
 import '../models/mod.dart';
+import '../models/mod_version.dart';
 import 'file_path_service.dart';
 import 'prerequisite_checker.dart';
 import 'api_service.dart';
@@ -179,30 +180,29 @@ class InstalledModsService {
     await removeInstalledMod(modId);
   }
 
-  static Future<void> installLatestVersion(Mod mod) async {
+  static String _getArchivePath(Mod mod, ModVersion version) {
+    final sanitizedFileName = '${mod.name}_v${version.version}.zip'
+        .replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
+    return path.join(
+      FilePathService.modArchivesDirPath,
+      sanitizedFileName,
+    );
+  }
+
+  static Future<InstalledMod> installVersion(Mod mod, ModVersion version) async {
     final gameFolder = PrerequisiteChecker.gameFolderPath;
     if (gameFolder == null) {
       throw Exception('Game folder not set');
     }
 
-    // Get the latest version
-    final versions = await ApiService.getModVersions(mod.id);
-    if (versions.isEmpty) {
-      throw Exception('No versions available for this mod');
-    }
-    final latestVersion = versions.first;
-
     // Get the mod file
-    final modFile = await ApiService.getModFile(latestVersion.fileId);
+    final modFile = await ApiService.getModFile(version.fileId);
     
     // Decode base64 string to bytes
     final bytes = base64.decode(modFile.fileContent);
     
     // Save the archive
-    final archivePath = path.join(
-      FilePathService.modArchivesDirPath,
-      '${mod.id}_${latestVersion.id}.zip',
-    );
+    final archivePath = _getArchivePath(mod, version);
     final archiveFile = File(archivePath);
     await archiveFile.create(recursive: true);
     await archiveFile.writeAsBytes(bytes);
@@ -229,11 +229,22 @@ class InstalledModsService {
     final installedMod = InstalledMod(
       modId: mod.id,
       modName: mod.name,
-      versionId: latestVersion.id,
-      version: latestVersion.version,
+      versionId: version.id,
+      version: version.version,
       archivePath: archivePath,
       installedAt: DateTime.now(),
     );
     await addInstalledMod(installedMod);
+    return installedMod;
+  }
+
+  static Future<void> installLatestVersion(Mod mod) async {
+    // Get the latest version
+    final versions = await ApiService.getModVersions(mod.id);
+    if (versions.isEmpty) {
+      throw Exception('No versions available for this mod');
+    }
+    final latestVersion = versions.first;
+    await installVersion(mod, latestVersion);
   }
 } 

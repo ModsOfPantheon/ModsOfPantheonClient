@@ -1,18 +1,12 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
-import 'package:path/path.dart' as path;
-import 'package:archive/archive.dart';
 import '../models/mod.dart';
 import '../models/mod_version.dart';
 import '../models/installed_mod.dart';
 import '../services/api_service.dart';
-import '../services/prerequisite_checker.dart';
 import '../services/installed_mods_service.dart';
 import '../widgets/error_display.dart';
-import '../services/file_path_service.dart';
-import 'dart:convert';
+import '../widgets/version_card.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 
 class ModDetailsPage extends StatefulWidget {
   final Mod mod;
@@ -98,78 +92,33 @@ class _ModDetailsPageState extends State<ModDetailsPage> {
     }
   }
 
+  String _getButtonText(ModVersion version, List<ModVersion> allVersions) {
+    if (_installedVersion == null) {
+      return 'Download';
+    }
+    if (_installedVersion!.versionId == version.id) {
+      return 'Download'; // This won't be shown since isInstalled will be true
+    }
+    final installedVersion = allVersions.firstWhere(
+      (v) => v.id == _installedVersion!.versionId,
+      orElse: () => allVersions.first,
+    );
+    return version.createdAt.isAfter(installedVersion.createdAt)
+        ? 'Upgrade'
+        : 'Downgrade';
+  }
+
   Future<void> _downloadVersion(ModVersion version) async {
     try {
       setState(() {
         _downloadProgress[version.id] = 0;
       });
 
-      final gameFolder = PrerequisiteChecker.gameFolderPath;
-      if (gameFolder == null) {
-        throw Exception('Game folder not set');
-      }
-
-      // Download the zip file
-      final modFile = await ApiService.getModFile(version.fileId);
-      // Extract the zip file
-      try {
-        // Decode base64 string to bytes
-        final bytes = base64.decode(modFile.fileContent);
-        final archive = ZipDecoder().decodeBytes(bytes);
-        
-        // Save the archive file
-        final archivePath = path.join(
-          FilePathService.modArchivesDirPath,
-          '${widget.mod.name}_v${version.version}.zip'.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_'),
-        );
-        await File(archivePath).writeAsBytes(bytes);
-        
-        // Extract all files to the game folder
-        for (final file in archive.files) {
-          if (file.isFile) {
-            final filePath = path.join(gameFolder, file.name);
-            final outputFile = File(filePath);
-            try {
-              await outputFile.create(recursive: true);
-              await outputFile.writeAsBytes(file.content);
-            } on FileSystemException catch (e) {
-              if (e.osError?.message.toLowerCase().contains('access denied') ?? false) {
-                throw Exception('The game appears to be running. Please close the game and try again.');
-              }
-              throw Exception('Failed to write to ${e.path}: ${e.message}');
-            }
-          }
-        }
-      } catch (e) {
-        throw Exception('The mod file appears to be corrupted. Please try downloading again or contact the mod author.');
-      }
-
-      // Record the installation
-      await InstalledModsService.addInstalledMod(InstalledMod(
-        modId: widget.mod.id,
-        modName: widget.mod.name,
-        versionId: version.id,
-        version: version.version,
-        installedAt: DateTime.now(),
-        archivePath: path.join(
-          FilePathService.modArchivesDirPath,
-          '${widget.mod.name}_v${version.version}.zip',
-        ),
-      ));
+      final installedMod = await InstalledModsService.installVersion(widget.mod, version);
 
       setState(() {
         _downloadProgress.remove(version.id);
-        _installedVersion = InstalledMod(
-          modId: widget.mod.id,
-          modName: widget.mod.name,
-          versionId: version.id,
-          version: version.version,
-          installedAt: DateTime.now(),
-          archivePath: path.join(
-            FilePathService.modArchivesDirPath,
-            '${widget.mod.name}_v${version.version}.zip',
-          ),
-        );
+        _installedVersion = installedMod;
       });
 
       _showSuccess('Successfully installed ${widget.mod.name} version ${version.version}');
@@ -277,107 +226,16 @@ class _ModDetailsPageState extends State<ModDetailsPage> {
                         final version = _versions![index];
                         final progress = _downloadProgress[version.id];
                         final isInstalled = _installedVersion?.versionId == version.id;
-                        
-                        // Determine if this version is newer or older than the installed version
-                        String buttonText = 'Download';
-                        if (_installedVersion != null && !isInstalled) {
-                          final installedVersion = _versions!.firstWhere(
-                            (v) => v.id == _installedVersion!.versionId,
-                            orElse: () => _versions!.first,
-                          );
-                          buttonText = version.createdAt.isAfter(installedVersion.createdAt)
-                              ? 'Upgrade'
-                              : 'Downgrade';
-                        }
-                        
-                        // Decode changelog if available
-                        String? decodedChangelog;
-                        if (version.changelog != null && version.changelog!.isNotEmpty) {
-                          try {
-                            decodedChangelog = utf8.decode(base64.decode(version.changelog!));
-                          } catch (e) {
-                            // If decoding fails, use the original string
-                            decodedChangelog = version.changelog;
-                          }
-                        }
+                        final buttonText = _getButtonText(version, _versions!);
+                        final decodedChangelog = VersionCard.decodeChangelog(version.changelog);
 
-                        return Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(12.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            version.version,
-                                            style: Theme.of(context).textTheme.titleMedium,
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            version.createdAt.toLocal().toString().split(' ')[0],
-                                            style: Theme.of(context).textTheme.bodySmall,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    if (progress != null)
-                                      Text('${(progress * 100).toInt()}%')
-                                    else
-                                      TextButton(
-                                        onPressed: isInstalled ? null : () => _downloadVersion(version),
-                                        style: TextButton.styleFrom(
-                                          foregroundColor: isInstalled 
-                                              ? Colors.grey 
-                                              : Theme.of(context).colorScheme.secondary,
-                                          textStyle: const TextStyle(fontWeight: FontWeight.bold),
-                                        ),
-                                        child: Text(isInstalled ? 'Installed' : buttonText),
-                                      ),
-                                  ],
-                                ),
-                                if (progress != null)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 8.0),
-                                    child: LinearProgressIndicator(value: progress),
-                                  ),
-                                if (decodedChangelog != null && decodedChangelog.isNotEmpty) ...[
-                                  const SizedBox(height: 12),
-                                  const Divider(),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Changelog:',
-                                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  MarkdownBody(
-                                    data: decodedChangelog,
-                                    styleSheet: MarkdownStyleSheet(
-                                      p: Theme.of(context).textTheme.bodyMedium,
-                                      h1: Theme.of(context).textTheme.headlineSmall,
-                                      h2: Theme.of(context).textTheme.titleLarge,
-                                      h3: Theme.of(context).textTheme.titleMedium,
-                                      code: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        fontFamily: 'monospace',
-                                        backgroundColor: Colors.grey[200],
-                                      ),
-                                      codeblockDecoration: BoxDecoration(
-                                        color: Colors.grey[200],
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
+                        return VersionCard(
+                          version: version,
+                          progress: progress,
+                          isInstalled: isInstalled,
+                          buttonText: buttonText,
+                          decodedChangelog: decodedChangelog,
+                          onDownload: () => _downloadVersion(version),
                         );
                       },
                     ),
