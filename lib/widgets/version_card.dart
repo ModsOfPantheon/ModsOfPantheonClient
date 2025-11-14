@@ -5,7 +5,7 @@ import '../models/mod_version.dart';
 
 class VersionCard extends StatelessWidget {
   final ModVersion version;
-  final double? progress;
+  final bool isInstalling;
   final bool isInstalled;
   final String buttonText;
   final String? decodedChangelog;
@@ -14,7 +14,7 @@ class VersionCard extends StatelessWidget {
   const VersionCard({
     super.key,
     required this.version,
-    this.progress,
+    required this.isInstalling,
     required this.isInstalled,
     required this.buttonText,
     this.decodedChangelog,
@@ -60,8 +60,12 @@ class VersionCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (progress != null)
-                  Text('${(progress! * 100).toInt()}%')
+                if (isInstalling)
+                  const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                 else
                   TextButton(
                     onPressed: isInstalled ? null : onDownload,
@@ -75,11 +79,6 @@ class VersionCard extends StatelessWidget {
                   ),
               ],
             ),
-            if (progress != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: LinearProgressIndicator(value: progress),
-              ),
             if (decodedChangelog != null && decodedChangelog!.isNotEmpty) ...[
               const SizedBox(height: 12),
               const Divider(),

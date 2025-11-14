@@ -25,7 +25,7 @@ class ModDetailsPage extends StatefulWidget {
 class _ModDetailsPageState extends State<ModDetailsPage> {
   List<ModVersion>? _versions;
   String? _error;
-  final Map<int, double> _downloadProgress = {};
+  int? _installingVersionId;
   InstalledMod? _installedVersion;
 
   @override
@@ -111,20 +111,23 @@ class _ModDetailsPageState extends State<ModDetailsPage> {
   Future<void> _downloadVersion(ModVersion version) async {
     try {
       setState(() {
-        _downloadProgress[version.id] = 0;
+        _installingVersionId = version.id;
       });
 
-      final installedMod = await InstalledModsService.installVersion(widget.mod, version);
+      final installedMod = await InstalledModsService.installVersion(
+        widget.mod,
+        version,
+      );
 
       setState(() {
-        _downloadProgress.remove(version.id);
+        _installingVersionId = null;
         _installedVersion = installedMod;
       });
 
       _showSuccess('Successfully installed ${widget.mod.name} version ${version.version}');
     } catch (e) {
       setState(() {
-        _downloadProgress.remove(version.id);
+        _installingVersionId = null;
       });
 
       String errorMessage;
@@ -224,18 +227,18 @@ class _ModDetailsPageState extends State<ModDetailsPage> {
                       separatorBuilder: (context, index) => const SizedBox(height: 8),
                       itemBuilder: (context, index) {
                         final version = _versions![index];
-                        final progress = _downloadProgress[version.id];
+                        final isThisInstalling = _installingVersionId == version.id;
                         final isInstalled = _installedVersion?.versionId == version.id;
                         final buttonText = _getButtonText(version, _versions!);
                         final decodedChangelog = VersionCard.decodeChangelog(version.changelog);
 
                         return VersionCard(
                           version: version,
-                          progress: progress,
+                          isInstalling: isThisInstalling,
                           isInstalled: isInstalled,
                           buttonText: buttonText,
                           decodedChangelog: decodedChangelog,
-                          onDownload: () => _downloadVersion(version),
+                          onDownload: _installingVersionId != null ? null : () => _downloadVersion(version),
                         );
                       },
                     ),

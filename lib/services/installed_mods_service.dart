@@ -189,43 +189,62 @@ class InstalledModsService {
     );
   }
 
-  static Future<InstalledMod> installVersion(Mod mod, ModVersion version) async {
+  static Future<InstalledMod> installVersion(
+    Mod mod,
+    ModVersion version, {
+    void Function(double progress)? onProgress,
+  }) async {
     final gameFolder = PrerequisiteChecker.gameFolderPath;
     if (gameFolder == null) {
       throw Exception('Game folder not set');
     }
 
+    onProgress?.call(0.0);
+
     // Get the mod file
+    onProgress?.call(0.1);
     final modFile = await ApiService.getModFile(version.fileId);
     
     // Decode base64 string to bytes
+    onProgress?.call(0.2);
     final bytes = base64.decode(modFile.fileContent);
     
     // Save the archive
+    onProgress?.call(0.3);
     final archivePath = _getArchivePath(mod, version);
     final archiveFile = File(archivePath);
     await archiveFile.create(recursive: true);
     await archiveFile.writeAsBytes(bytes);
 
     // Extract the files
+    onProgress?.call(0.4);
     final archive = ZipDecoder().decodeBytes(bytes);
-    for (final file in archive.files) {
-      if (file.isFile) {
-        final filePath = path.join(gameFolder, file.name);
-        final outputFile = File(filePath);
-        try {
-          await outputFile.create(recursive: true);
-          await outputFile.writeAsBytes(file.content);
-        } on FileSystemException catch (e) {
-          if (e.osError?.message.toLowerCase().contains('access denied') ?? false) {
-            throw Exception('The game appears to be running. Please close the game and try again.');
-          }
-          throw Exception('Failed to write to ${e.path}: ${e.message}');
+    final fileList = archive.files.where((f) => f.isFile).toList();
+    final totalFiles = fileList.length;
+    
+    for (int i = 0; i < fileList.length; i++) {
+      final file = fileList[i];
+      final filePath = path.join(gameFolder, file.name);
+      final outputFile = File(filePath);
+      try {
+        await outputFile.create(recursive: true);
+        await outputFile.writeAsBytes(file.content);
+      } on FileSystemException catch (e) {
+        if (e.osError?.message.toLowerCase().contains('access denied') ?? false) {
+          throw Exception('The game appears to be running. Please close the game and try again.');
         }
+        throw Exception('Failed to write to ${e.path}: ${e.message}');
+      }
+      
+      // Update progress: 0.4 to 0.9 based on file extraction progress
+      if (totalFiles > 0) {
+        final extractionProgress = 0.4 + (0.5 * (i + 1) / totalFiles);
+        onProgress?.call(extractionProgress);
       }
     }
 
     // Save the installed mod record
+    onProgress?.call(0.9);
     final installedMod = InstalledMod(
       modId: mod.id,
       modName: mod.name,
@@ -235,6 +254,8 @@ class InstalledModsService {
       installedAt: DateTime.now(),
     );
     await addInstalledMod(installedMod);
+    
+    onProgress?.call(1.0);
     return installedMod;
   }
 
@@ -247,4 +268,4 @@ class InstalledModsService {
     final latestVersion = versions.first;
     await installVersion(mod, latestVersion);
   }
-} 
+}
