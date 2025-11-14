@@ -12,6 +12,7 @@ import '../widgets/error_display.dart';
 import '../services/file_path_service.dart';
 import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 class ModDetailsPage extends StatefulWidget {
   final Mod mod;
@@ -289,31 +290,94 @@ class _ModDetailsPageState extends State<ModDetailsPage> {
                               : 'Downgrade';
                         }
                         
-                        return ListTile(
-                          title: Text(version.version),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                version.createdAt.toLocal().toString().split(' ')[0],
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                              if (progress != null)
-                                LinearProgressIndicator(value: progress),
-                            ],
-                          ),
-                          trailing: progress != null
-                              ? Text('${(progress * 100).toInt()}%')
-                              : TextButton(
-                                  onPressed: isInstalled ? null : () => _downloadVersion(version),
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: isInstalled 
-                                        ? Colors.grey 
-                                        : Theme.of(context).colorScheme.secondary,
-                                    textStyle: const TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                  child: Text(isInstalled ? 'Installed' : buttonText),
+                        // Decode changelog if available
+                        String? decodedChangelog;
+                        if (version.changelog != null && version.changelog!.isNotEmpty) {
+                          try {
+                            decodedChangelog = utf8.decode(base64.decode(version.changelog!));
+                          } catch (e) {
+                            // If decoding fails, use the original string
+                            decodedChangelog = version.changelog;
+                          }
+                        }
+
+                        return Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            version.version,
+                                            style: Theme.of(context).textTheme.titleMedium,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            version.createdAt.toLocal().toString().split(' ')[0],
+                                            style: Theme.of(context).textTheme.bodySmall,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (progress != null)
+                                      Text('${(progress * 100).toInt()}%')
+                                    else
+                                      TextButton(
+                                        onPressed: isInstalled ? null : () => _downloadVersion(version),
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: isInstalled 
+                                              ? Colors.grey 
+                                              : Theme.of(context).colorScheme.secondary,
+                                          textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                                        ),
+                                        child: Text(isInstalled ? 'Installed' : buttonText),
+                                      ),
+                                  ],
                                 ),
+                                if (progress != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8.0),
+                                    child: LinearProgressIndicator(value: progress),
+                                  ),
+                                if (decodedChangelog != null && decodedChangelog.isNotEmpty) ...[
+                                  const SizedBox(height: 12),
+                                  const Divider(),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Changelog:',
+                                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  MarkdownBody(
+                                    data: decodedChangelog,
+                                    styleSheet: MarkdownStyleSheet(
+                                      p: Theme.of(context).textTheme.bodyMedium,
+                                      h1: Theme.of(context).textTheme.headlineSmall,
+                                      h2: Theme.of(context).textTheme.titleLarge,
+                                      h3: Theme.of(context).textTheme.titleMedium,
+                                      code: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        fontFamily: 'monospace',
+                                        backgroundColor: Colors.grey[200],
+                                      ),
+                                      codeblockDecoration: BoxDecoration(
+                                        color: Colors.grey[200],
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
                         );
                       },
                     ),

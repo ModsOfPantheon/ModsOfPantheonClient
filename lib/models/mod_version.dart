@@ -4,6 +4,7 @@ class ModVersion {
   final DateTime createdAt;
   final int modId;
   final int fileId;
+  final String? changelog;
 
   ModVersion({
     required this.id,
@@ -11,6 +12,7 @@ class ModVersion {
     required this.createdAt,
     required this.modId,
     required this.fileId,
+    this.changelog,
   });
 
   factory ModVersion.fromJson(Map<String, dynamic> json) {
@@ -20,6 +22,7 @@ class ModVersion {
       createdAt: DateTime.parse(json['CreatedAt'] as String),
       modId: json['ModId'] as int,
       fileId: json['FileId'] as int,
+      changelog: json['ChangeLog'] as String?,
     );
   }
 } 
