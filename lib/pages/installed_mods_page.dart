@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
-import 'package:path/path.dart' as path;
 import '../models/installed_mod.dart';
 import '../services/installed_mods_service.dart';
 import '../widgets/error_display.dart';
-import '../services/prerequisite_checker.dart';
-import 'package:archive/archive.dart';
 
 class InstalledModsPage extends StatefulWidget {
   final bool isSelected;
@@ -72,82 +68,10 @@ class _InstalledModsPageState extends State<InstalledModsPage> {
         _uninstallingMods.add(mod.modId);
       });
 
-      final gameFolder = PrerequisiteChecker.gameFolderPath;
-      if (gameFolder == null) {
-        throw Exception('Game folder not set');
-      }
+      await InstalledModsService.uninstallMod(mod.modId);
 
-      // Load the saved archive
-      final archiveFile = File(mod.archivePath);
-      if (!await archiveFile.exists()) {
-        throw Exception('Mod archive not found. Please reinstall the mod.');
-      }
-
-      final bytes = await archiveFile.readAsBytes();
-      final archive = ZipDecoder().decodeBytes(bytes);
-      
-      // Keep track of files we've successfully deleted
-      final deletedFiles = <String>[];
-      // Keep track of parent directories
-      final parentDirs = <String>{};
-      
-      try {
-        // Delete each file that was installed
-        for (final file in archive.files) {
-          if (file.isFile) {
-            final filePath = path.join(gameFolder, file.name);
-            final fileToDelete = File(filePath);
-            if (await fileToDelete.exists()) {
-              await fileToDelete.delete();
-              deletedFiles.add(filePath);
-              // Add parent directory to the set
-              parentDirs.add(path.dirname(filePath));
-            }
-          }
-        }
-
-        // Clean up empty directories
-        for (final dirPath in parentDirs) {
-          final dir = Directory(dirPath);
-          if (await dir.exists()) {
-            // Check if directory is empty
-            final isEmpty = await dir.list().isEmpty;
-            if (isEmpty) {
-              // Only delete if it's a subdirectory of Mods or UserLibs
-              final relativePath = path.relative(dirPath, from: gameFolder);
-              if (relativePath.startsWith('Mods') || relativePath.startsWith('UserLibs')) {
-                await dir.delete();
-              }
-            }
-          }
-        }
-
-        // Only remove from installed mods list after successful file deletion
-        await InstalledModsService.removeInstalledMod(mod.modId);
-        _showSuccess('Successfully uninstalled ${mod.modName}');
-        _loadInstalledMods();
-      } catch (e) {
-        // Try to restore any files we already deleted
-        for (final filePath in deletedFiles) {
-          try {
-            final file = File(filePath);
-            if (!await file.exists()) {
-              // Find the file in the archive
-              final archiveFile = archive.files.firstWhere(
-                (f) => path.join(gameFolder, f.name) == filePath,
-              );
-              // Create parent directories if they don't exist
-              await file.parent.create(recursive: true);
-              // Write the file back
-              await file.writeAsBytes(archiveFile.content);
-            }
-          } catch (e) {
-            // If we can't restore a file, log it but continue trying to restore others
-            print('Failed to restore file: $filePath');
-          }
-        }
-        rethrow; // Re-throw the original error
-      }
+      _showSuccess('Successfully uninstalled ${mod.modName}');
+      _loadInstalledMods();
     } catch (e) {
       String errorMessage;
       if (e.toString().contains('Game folder not set')) {
