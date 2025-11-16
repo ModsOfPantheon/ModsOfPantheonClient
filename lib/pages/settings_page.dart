@@ -27,7 +27,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Text(
               'Successfully restored all mods',
               style: const TextStyle(color: Colors.white),
