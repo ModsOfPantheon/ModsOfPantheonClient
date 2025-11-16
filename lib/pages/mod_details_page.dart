@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import '../models/mod.dart';
 import '../models/mod_version.dart';
 import '../models/installed_mod.dart';
@@ -22,7 +24,8 @@ class ModDetailsPage extends StatefulWidget {
   State<ModDetailsPage> createState() => _ModDetailsPageState();
 }
 
-class _ModDetailsPageState extends State<ModDetailsPage> {
+class _ModDetailsPageState extends State<ModDetailsPage> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   List<ModVersion>? _versions;
   String? _error;
   int? _installingVersionId;
@@ -31,8 +34,15 @@ class _ModDetailsPageState extends State<ModDetailsPage> {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _loadModVersions();
     _loadInstalledVersion();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadInstalledVersion() async {
@@ -102,6 +112,51 @@ class _ModDetailsPageState extends State<ModDetailsPage> {
     return version.createdAt.isAfter(installedVersion.createdAt)
         ? 'Upgrade'
         : 'Downgrade';
+  }
+
+  String? _decodeReadme(String? readme) {
+    if (readme == null || readme.isEmpty) {
+      return null;
+    }
+    try {
+      final decoded = utf8.decode(base64.decode(readme));
+      // Normalize line breaks: convert \r\n and \r to \n
+      return decoded.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+    } catch (e) {
+      // If decoding fails, return null
+      return null;
+    }
+  }
+
+  Widget _buildOverviewContent() {
+    final decodedReadme = _decodeReadme(widget.mod.readme);
+    
+    if (decodedReadme == null || decodedReadme.isEmpty) {
+      return Text(
+        'No readme available for this mod.',
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: Colors.grey[600],
+        ),
+      );
+    }
+
+    return MarkdownBody(
+      data: decodedReadme,
+      styleSheet: MarkdownStyleSheet(
+        p: Theme.of(context).textTheme.bodyMedium,
+        h1: Theme.of(context).textTheme.headlineSmall,
+        h2: Theme.of(context).textTheme.titleLarge,
+        h3: Theme.of(context).textTheme.titleMedium,
+        code: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          fontFamily: 'monospace',
+          backgroundColor: Colors.grey[200],
+        ),
+        codeblockDecoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(4),
+        ),
+      ),
+    );
   }
 
   Future<void> _downloadVersion(ModVersion version) async {
@@ -195,52 +250,76 @@ class _ModDetailsPageState extends State<ModDetailsPage> {
           ],
         ),
         Expanded(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.mod.shortDescription,
-                  style: Theme.of(context).textTheme.bodyLarge,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Versions:',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 8),
-                if (_error != null)
-                  ErrorDisplay(error: _error!)
-                else if (_versions == null)
-                  const CircularProgressIndicator()
-                else if (_versions!.isEmpty)
-                  const Text('No versions available')
-                else
-                  Expanded(
-                    child: ListView.separated(
-                      itemCount: _versions!.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 8),
-                      itemBuilder: (context, index) {
-                        final version = _versions![index];
-                        final isThisInstalling = _installingVersionId == version.id;
-                        final isInstalled = _installedVersion?.versionId == version.id;
-                        final buttonText = _getButtonText(version, _versions!);
-                        final decodedChangelog = VersionCard.decodeChangelog(version.changelog);
-
-                        return VersionCard(
-                          version: version,
-                          isInstalling: isThisInstalling,
-                          isInstalled: isInstalled,
-                          buttonText: buttonText,
-                          decodedChangelog: decodedChangelog,
-                          onDownload: _installingVersionId != null ? null : () => _downloadVersion(version),
-                        );
-                      },
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.mod.shortDescription,
+                      style: Theme.of(context).textTheme.bodyLarge,
                     ),
-                  ),
-              ],
-            ),
+                    const SizedBox(height: 16),
+                    TabBar(
+                      controller: _tabController,
+                      labelColor: Theme.of(context).colorScheme.secondary,
+                      unselectedLabelColor: Colors.grey[400],
+                      indicatorColor: Theme.of(context).colorScheme.secondary,
+                      tabs: const [
+                        Tab(text: 'Overview'),
+                        Tab(text: 'Versions'),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    // Overview tab
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: SingleChildScrollView(
+                        child: _buildOverviewContent(),
+                      ),
+                    ),
+                    // Versions tab
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: _error != null
+                          ? ErrorDisplay(error: _error!)
+                          : _versions == null
+                              ? const Center(child: CircularProgressIndicator())
+                              : _versions!.isEmpty
+                                  ? const Center(child: Text('No versions available'))
+                                  : ListView.separated(
+                                      itemCount: _versions!.length,
+                                      separatorBuilder: (context, index) => const SizedBox(height: 8),
+                                      itemBuilder: (context, index) {
+                                        final version = _versions![index];
+                                        final isThisInstalling = _installingVersionId == version.id;
+                                        final isInstalled = _installedVersion?.versionId == version.id;
+                                        final buttonText = _getButtonText(version, _versions!);
+                                        final decodedChangelog = VersionCard.decodeChangelog(version.changelog);
+
+                                        return VersionCard(
+                                          version: version,
+                                          isInstalling: isThisInstalling,
+                                          isInstalled: isInstalled,
+                                          buttonText: buttonText,
+                                          decodedChangelog: decodedChangelog,
+                                          onDownload: _installingVersionId != null ? null : () => _downloadVersion(version),
+                                        );
+                                      },
+                                    ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ],
